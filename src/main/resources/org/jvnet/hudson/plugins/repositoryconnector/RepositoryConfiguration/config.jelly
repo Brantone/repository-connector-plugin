@@ -21,10 +21,10 @@
 					<f:entry title="${%RepoType}">
 						<f:textbox name="type" value="${repo.type}" />
 					</f:entry>
-					
+
 					<f:entry title="${%RepoManager}" description="${%RepoManagerDescription}">
-                        <f:checkbox name="repositoryManager" checked="${repo.isRepositoryManager()}"/>
-                    </f:entry>
+						<f:checkbox name="repositoryManager" checked="${repo.isRepositoryManager()}"/>
+					</f:entry>
 
 					<f:entry title="${%Url}">
 						<f:textbox name="url" value="${repo.url}" />
@@ -36,6 +36,13 @@
 
 					<f:entry title="${%Password}">
 						<f:password name="password" value="${repo.password}" />
+					</f:entry>
+
+					<f:entry>
+						<div align="right">
+							<f:validateButton title="${%Test connection}" progress="${%Progress}"
+								method="testConnection" with="id,type,url,user,password,repositoryManager" />
+						</div>						
 					</f:entry>
 
 					<f:entry>

@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.maven.repository.internal.DefaultServiceLocator;
 import org.apache.maven.repository.internal.MavenRepositorySystemSession;
 import org.jvnet.hudson.plugins.repositoryconnector.Repository;
+import org.jvnet.hudson.plugins.repositoryconnector.wagon.ManualWagonProvider;
 import org.sonatype.aether.RepositorySystem;
 import org.sonatype.aether.RepositorySystemSession;
 import org.sonatype.aether.artifact.Artifact;
@@ -53,7 +54,11 @@ import org.sonatype.aether.resolution.DependencyResult;
 import org.sonatype.aether.resolution.VersionRangeRequest;
 import org.sonatype.aether.resolution.VersionRangeResolutionException;
 import org.sonatype.aether.resolution.VersionRangeResult;
+import org.sonatype.aether.spi.connector.RepositoryConnector;
 import org.sonatype.aether.spi.connector.RepositoryConnectorFactory;
+import org.sonatype.aether.spi.log.NullLogger;
+import org.sonatype.aether.spi.io.FileProcessor;
+import org.sonatype.aether.transfer.NoRepositoryConnectorException;
 import org.sonatype.aether.util.DefaultRepositorySystemSession;
 import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.graph.PreorderNodeListGenerator;
@@ -178,7 +183,7 @@ public class Aether {
     }
 
     private RepositorySystemSession newSession() {
-        MavenRepositorySystemSession session = new MavenRepositorySystemSession();
+            MavenRepositorySystemSession session = new MavenRepositorySystemSession();
         session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(localRepository));
         if (extendedLogging && logger != null) {
             session.setTransferListener(new ConsoleTransferListener(logger));
@@ -251,5 +256,65 @@ public class Aether {
         deployRequest.setRepository(repoObj);
 
         repositorySystem.deploy(session, deployRequest);
+    }
+
+    public boolean ping(Repository repository) { {
+        RepositorySystemSession session = newSession();
+        Artifact artifact = new DefaultArtifact(groupId, artifactId, null, null, "[0,)");
+
+                VersionRangeRequest rangeRequest = new VersionRangeRequest();
+                rangeRequest.setArtifact( artifact );
+                rangeRequest.setRepositories( repositories );
+
+                VersionRangeResult rangeResult = repositorySystem.resolveVersionRange( session, rangeRequest );
+
+                return rangeResult.getVersions();
+        /*
+        try {
+            List<Version> versions = this.resolveVersions("ping_test", "ping_test");
+            System.out.println("Versions: " + versions.size());
+        } catch (VersionRangeResolutionException ex) {
+            System.out.println("VersionRangeResolutionException");
+        } catch (Exception ex) {
+            System.out.println("Exception type: ");
+        }
+
+                return true;
+*/
+        
+        /* almost but not quite, kept throing "NoeRepoConnectorException" no matter what
+        RepositorySystemSession session = newSession();
+        WagonRepositoryConnectorFactory rcf = new WagonRepositoryConnectorFactory();
+        //WagonRepositoryConnectorFactory rcf = new WagonRepositoryConnectorFactory(NullLogger.INSTANCE, new FileProcessor(), new ManualWagonProvider(), null);
+        RemoteRepository r = new RemoteRepository(repository.getId(), repository.getType(), repository.getUrl());
+        r.setRepositoryManager(repository.isRepositoryManager());
+        Authentication authentication = new Authentication(repository.getUser(), repository.getPassword());
+        r.setAuthentication(authentication);
+
+
+
+
+System.out.println(" repository: " + repository.toString() + " user : " + repository.getUser());
+System.out.println(" session: " + session.toString());
+System.out.println(" r: " + r.toString());
+
+        try {
+            RepositoryConnector rc = rcf.newInstance(session, r);
+            System.out.println("repositorySystem Session : " + session.getClass() );
+        } catch (NoRepositoryConnectorException ex) {
+            System.out.println("NoRepositoryConnectorException");
+        }
+        
+/*        RemoteRepository repoObj = new RemoteRepository(repository.getId(), repository.getType(), repository.getUrl());
+        repoObj.setRepositoryManager(repository.isRepositoryManager());
+        final String user = repository.getUser();
+        if (!StringUtils.isBlank(user)) {
+            if (logger != null) {
+                logger.println("INFO: set authentication for " + user);
+            }
+            Authentication authentication = new Authentication(user, repository.getPassword());
+            repoObj.setAuthentication(authentication);
+        }
+ */       return true;
     }
 }

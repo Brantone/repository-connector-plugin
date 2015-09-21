@@ -2,7 +2,9 @@ package org.jvnet.hudson.plugins.repositoryconnector;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.util.FormValidation;
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,11 +14,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.servlet.ServletException;
 import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.maven.repository.internal.MavenRepositorySystemSession;
+import org.jvnet.hudson.plugins.repositoryconnector.aether.Aether;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.sonatype.aether.RepositorySystemSession;
+import org.sonatype.aether.connector.wagon.WagonRepositoryConnectorFactory;
+import org.sonatype.aether.repository.Authentication;
+import org.sonatype.aether.repository.RemoteRepository;
 
 /**
  * This class provides the global configuration for the plugin.
@@ -40,7 +51,7 @@ public class RepositoryConfiguration extends GlobalConfiguration implements Seri
     private String localRepository = "";
 
     public RepositoryConfiguration() {
-        load();
+            load();
         if (repos.isEmpty()) {
             repos.putAll(DEFAULT_REPOS);
         }
@@ -112,7 +123,6 @@ public class RepositoryConfiguration extends GlobalConfiguration implements Seri
         return result;
     }
 
-
     public Collection<Repository> getRepos() {
         List<Repository> r = new ArrayList<Repository>();
         r.addAll(repos.values());
@@ -120,6 +130,7 @@ public class RepositoryConfiguration extends GlobalConfiguration implements Seri
         log.fine("repos=" + r);
         return r;
     }
+
     public Map<String, Repository> getRepositoryMap() {
         log.fine("reposmap=" + repos);
         return repos;
@@ -140,5 +151,47 @@ public class RepositoryConfiguration extends GlobalConfiguration implements Seri
                 return 1;
             } // returning 0 would merge keys
         }
+    }
+
+    public FormValidation doTestConnection(@QueryParameter("id") final String id, @QueryParameter("type") final String type,
+            @QueryParameter("url") final String url, @QueryParameter("user") final String user,
+            @QueryParameter("password") final String password, @QueryParameter("repositoryManager") final boolean isRepositoryManager)
+            throws IOException, ServletException {
+ 
+        try {
+            File localRepo = getLocalRepoPath();
+            List<Repository> repos = new ArrayList<Repository>();
+          //  RemoteRepository r = new RemoteRepository(id, type, url);
+            Repository r = new Repository(id, type, url, user, password, isRepositoryManager);
+            repos.add(r);
+            Aether aether = new Aether(repos, localRepo);
+            aether.ping(r);
+
+//            MavenRepositorySystemSession session = new MavenRepositorySystemSession();
+//        session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(localRepository));
+//
+//            WagonRepositoryConnectorFactory rc = new WagonRepositoryConnectorFactory();
+//            
+//            if (!StringUtils.isBlank(user)) {
+//                Authentication authentication = new Authentication(user, password);
+//                r.setAuthentication(authentication);
+//            }
+//            r.setRepositoryManager(isRepositoryManager);
+//            if (r.doTestConnection()) {
+                return FormValidation.ok("Success to connect to '" + id + "' at " + url);
+  //          } else {
+    //            return FormValidation.error("FAILED to connect to '" + id + "' at " + url);
+      //      }
+        } catch (Exception ex) {
+            return FormValidation.error("Client error : " + ex.getMessage());
+        }
+        /*
+        NexusClient client = new NexusJerseyClient(url, user, password);
+        if (client.ping()) {
+            return FormValidation.ok("Success to connect to " + url);
+        } else {
+            return FormValidation.error("Failed to connect to " + url);
+        }*/
+
     }
 }

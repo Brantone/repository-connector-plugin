@@ -129,7 +129,22 @@ public class Repository implements Serializable, Comparable {
         return isRepositoryManager;
     }
 
-        public int compareTo(Object o) {
-            return id.compareTo(((Repository)o).getId());
-        }
+    public int compareTo(Object o) {
+        return id.compareTo(((Repository)o).getId());
+    }
+
+    public boolean doTestConnection() {
+        // Set session
+        // Use validateSession() from DefaultRepositorySystem
+        
+        return true; // FormValidation.ok("Success to connect to " + url);
+        /*
+        NexusClient client = new NexusJerseyClient(url, user, password);
+        if (client.ping()) {
+            return FormValidation.ok("Success to connect to " + url);
+        } else {
+            return FormValidation.error("Failed to connect to " + url);
+        }*/
+    }
+
 }
