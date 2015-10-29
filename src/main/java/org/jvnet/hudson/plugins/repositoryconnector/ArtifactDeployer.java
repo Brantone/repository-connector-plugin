@@ -115,8 +115,9 @@ public class ArtifactDeployer extends Notifier implements Serializable {
                 final String groupId = TokenMacro.expandAll(build, listener, a.getGroupId());
                 final String packaging = TokenMacro.expandAll(build, listener, a.getExtension());
                 final String targetFileName = TokenMacro.expandAll(build, listener, a.getTargetFileName());
+                final Boolean uploadPOM = a.getUploadPOM();
 
-                Artifact aTmp = new Artifact(groupId, artifactId, classifier, version, packaging, targetFileName);
+                Artifact aTmp = new Artifact(groupId, artifactId, classifier, version, packaging, targetFileName, uploadPOM);
 
                 String aTmpFileName = aTmp.getTargetFileName();
                 FilePath source = new FilePath(build.getWorkspace(), aTmpFileName);
@@ -132,9 +133,6 @@ public class ArtifactDeployer extends Notifier implements Serializable {
                 org.sonatype.aether.artifact.Artifact artifact = new DefaultArtifact(groupId, artifactId, classifier, extension, version);
                 logger.println("INFO: deploy artifact " + aTmp);
                 artifact = artifact.setFile(targetFile);
-                org.sonatype.aether.artifact.Artifact pom = new SubArtifact(artifact, "", "pom");
-                final File tmpPom = getTempPom(aTmp);
-                pom = pom.setFile(tmpPom);
 
                 final String tmpRepoId = version.contains("SNAPSHOT") ? snapshotRepoId : repoId;
                 Repository repo = getRepoById(tmpRepoId);
@@ -146,12 +144,22 @@ public class ArtifactDeployer extends Notifier implements Serializable {
                     repo = new Repository(repo.getId(), repo.getType(), repo.getUrl(), tmpuser, tmppwd, repo.isRepositoryManager(), repo.allowDeploy());
                 }
 
-                aether.install(artifact, pom);
-                aether.deploy(repo, artifact, pom);
+                if ((uploadPOM != null) && uploadPOM) {
+                    org.sonatype.aether.artifact.Artifact pom = new SubArtifact(artifact, "", "pom");
+                    final File tmpPom = getTempPom(aTmp);
+                    pom = pom.setFile(tmpPom);
+
+                    aether.install(artifact, pom);
+                    aether.deploy(repo, artifact, pom);
+
+                    tmpPom.delete();
+                } else {
+                    aether.install(artifact, null);
+                    aether.deploy(repo, artifact, null);
+                }
 
                 // clean the resources
                 targetFile.delete();
-                tmpPom.delete();
             }
         } catch (DeploymentException e) {
             logger.println("ERROR: possible causes: 1. in case of a SNAPSHOT deployment: does your remote repository allow SNAPSHOT deployments?, 2. in case of a release deployment: is this version of the artifact already deployed then does your repository allow updating artifacts?");
